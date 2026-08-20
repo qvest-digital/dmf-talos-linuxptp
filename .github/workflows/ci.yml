@@ -1,0 +1,35 @@
+name: ci
+
+# Builds the image on every pull request without publishing it. The static
+# link check and the upstream commit check live in the Dockerfile, so a build
+# that succeeds here is the test.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: linuxptp:ci
+
+      - name: Binaries run and report the pinned version
+        run: |
+          for b in ptp4l phc2sys pmc; do
+            printf '%s: ' "$b"
+            docker run --rm --entrypoint "/usr/sbin/$b" linuxptp:ci -v
+          done
